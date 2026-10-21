@@ -6,64 +6,9 @@ import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
-import "openapiv3/annotations.proto";
 import "proto/v1/structures.proto";
 
 option go_package = "github.com/LTD-Beget/llm-gateway/proto/v1;llmgateway";
-
-option (openapi.v3.document) = {
-  info: {
-    title: "ИИ шлюз"
-    version: "v1"
-    description: "Для работы с текстовыми моделями используйте Chat Completions API. Responses API не поддерживается."
-  }
-  servers: {url: "https://api-llm.beget.com/v1"}
-  external_docs: {url: "https://beget.com/ru/kb/manual/ai-gateway" description: "Руководство по ИИ шлюзу"}
-  tags: {name: "Генерация ответов" description: "Генерация ответов модели на основе переданных сообщений."}
-  tags: {name: "Эмбеддинги" description: "Векторные представления текста для поиска по смыслу и сравнения текстов."}
-  tags: {name: "Модели" description: "Информация о моделях, доступных вашему API-ключу."}
-  security: {additional_properties: {name: "BearerAuth" value: {value: []}}}
-  components: {
-    security_schemes: {additional_properties: {
-      name: "BearerAuth"
-      value: {security_scheme: {type: "http" scheme: "bearer" description: "API-ключ ИИ шлюза Beget"}}
-    }}
-    responses: {additional_properties: {
-      name: "GatewayError"
-      value: {response: {
-        description: "Возвращает описание ошибки в поле `error`.\n\n"
-          "- `400` - некорректные параметры запроса.\n"
-          "- `401` - API-ключ недействителен или отключён.\n"
-          "- `402` - недостаточно средств на балансе или исчерпан бюджет ключа.\n"
-          "- `404` - модель не найдена или недоступна ключу.\n"
-          "- `409` - конфликт идемпотентности.\n"
-          "- `429` - превышен лимит запросов.\n"
-          "- `5xx` - ошибка шлюза или поставщика модели."
-        content: {additional_properties: {
-          name: "application/json"
-          value: {
-            schema: {schema: {
-              type: "object"
-              properties: {additional_properties: {
-                name: "error"
-                value: {schema: {
-                  type: "object"
-                  properties: {
-                    additional_properties: {name: "message" value: {schema: {type: "string"}}}
-                    additional_properties: {name: "type" value: {schema: {type: "string"}}}
-                    additional_properties: {name: "param" value: {schema: {type: "string" nullable: true}}}
-                    additional_properties: {name: "code" value: {schema: {type: "string"}}}
-                  }
-                }}
-              }}
-            }}
-            example: {yaml: "{error: {message: 'invalid api key', type: invalid_request_error, param: null, code: invalid_api_key}}"}
-          }
-        }}
-      }}
-    }}
-  }
-};
 
 // Обрабатывает запросы к моделям в формате OpenAI API.
 service LlmGatewayService {
@@ -77,12 +22,6 @@ service LlmGatewayService {
   // Схема ответа описывает режим без потоковой передачи.
   rpc createChatCompletion(ChatCompletionRequest) returns (ChatCompletionResponse) {
     option (google.api.http) = {post: "/chat/completions" body: "*"};
-    option (openapi.v3.operation) = {
-      tags: "Генерация ответов"
-      operation_id: "createChatCompletion"
-      summary: "Сгенерировать ответ"
-      responses: {default: {reference: {_ref: "#/components/responses/GatewayError"}}}
-    };
   }
 
   // Создаёт эмбеддинги для переданного текста.
@@ -92,12 +31,6 @@ service LlmGatewayService {
   // В примере `dimensions: 8` задаёт вектор из восьми чисел.
   rpc createEmbedding(EmbeddingRequest) returns (EmbeddingResponse) {
     option (google.api.http) = {post: "/embeddings" body: "*"};
-    option (openapi.v3.operation) = {
-      tags: "Эмбеддинги"
-      operation_id: "createEmbedding"
-      summary: "Создать эмбеддинги"
-      responses: {default: {reference: {_ref: "#/components/responses/GatewayError"}}}
-    };
   }
 
   // Возвращает список моделей, доступных вашему API-ключу.
@@ -106,51 +39,22 @@ service LlmGatewayService {
   // или создании эмбеддингов. Список зависит от ограничений API-ключа.
   rpc listModels(google.protobuf.Empty) returns (ListModelsResponse) {
     option (google.api.http) = {get: "/models"};
-    option (openapi.v3.operation) = {
-      tags: "Модели"
-      operation_id: "listModels"
-      summary: "Получить список моделей"
-      responses: {default: {reference: {_ref: "#/components/responses/GatewayError"}}}
-    };
   }
 
   // Возвращает информацию о модели по её идентификатору.
   // Модель должна быть доступна вашему API-ключу.
   rpc getModel(GetModelRequest) returns (beget.llm_gateway.v1.structures.Model) {
     option (google.api.http) = {get: "/models/{model}"};
-    option (openapi.v3.operation) = {
-      tags: "Модели"
-      operation_id: "getModel"
-      summary: "Получить информацию о модели"
-      responses: {default: {reference: {_ref: "#/components/responses/GatewayError"}}}
-    };
   }
 }
 
 message ChatCompletionRequest {
-  option (openapi.v3.schema) = {example: {yaml:
-    "{\n"
-    "  \"model\": \"gemini-3.1-flash-lite\",\n"
-    "  \"messages\": [\n"
-    "    {\n"
-    "      \"role\": \"system\",\n"
-    "      \"content\": \"Ты редактор интернет-магазина. Напиши ровно одно короткое предложение, не более 20 слов. Без вступления, вариантов и форматирования.\"\n"
-    "    },\n"
-    "    {\n"
-    "      \"role\": \"user\",\n"
-    "      \"content\": \"Описание товара: белая керамическая кружка, 350 мл, можно мыть в посудомоечной машине.\"\n"
-    "    }\n"
-    "  ],\n"
-    "  \"max_tokens\": 128\n"
-    "}"
-  }};
-
   // Идентификатор модели. Доступные значения возвращает метод «Получить список моделей».
-  string model = 1 [(google.api.field_behavior) = REQUIRED, (openapi.v3.property) = {example: {yaml: "gemini-3.1-flash-lite"}}];
+  string model = 1 [(google.api.field_behavior) = REQUIRED];
   // Список сообщений диалога. Должен содержать хотя бы одно сообщение.
-  repeated beget.llm_gateway.v1.structures.ChatMessage messages = 2 [(google.api.field_behavior) = REQUIRED, (openapi.v3.property) = {min_items: 1}];
+  repeated beget.llm_gateway.v1.structures.ChatMessage messages = 2 [(google.api.field_behavior) = REQUIRED];
   // Если true, передаёт ответ по частям в формате SSE. По умолчанию false.
-  optional bool stream = 3 [(openapi.v3.property) = {example: {yaml: "false"}}];
+  optional bool stream = 3;
   // Максимальное количество токенов в ответе модели. Поддержка зависит от модели.
   optional int32 max_tokens = 4;
   // Максимальное количество токенов ответа, включая токены рассуждений. Поддержка зависит от модели.
@@ -176,50 +80,12 @@ message ChatCompletionRequest {
 }
 
 message ChatCompletionResponse {
-  option (openapi.v3.schema) = {example: {yaml:
-    "{\n"
-    "  \"id\": \"gen_2224184511775248385\",\n"
-    "  \"object\": \"chat.completion\",\n"
-    "  \"created\": 1792590913,\n"
-    "  \"model\": \"gemini-3.1-flash-lite\",\n"
-    "  \"choices\": [\n"
-    "    {\n"
-    "      \"index\": 0,\n"
-    "      \"message\": {\n"
-    "        \"role\": \"assistant\",\n"
-    "        \"content\": \"Классическая белая кружка объемом 350 мл подходит для мытья в посудомоечной машине.\"\n"
-    "      },\n"
-    "      \"finish_reason\": \"stop\"\n"
-    "    }\n"
-    "  ],\n"
-    "  \"usage\": {\n"
-    "    \"cache_write_price_per_1m_rub\": 10,\n"
-    "    \"cached_price_per_1m_rub\": 3,\n"
-    "    \"completion_tokens\": 25,\n"
-    "    \"completion_tokens_details\": {\n"
-    "      \"audio_tokens\": 0,\n"
-    "      \"reasoning_tokens\": 0\n"
-    "    },\n"
-    "    \"cost_rub\": 0.00632,\n"
-    "    \"input_price_per_1m_rub\": 30,\n"
-    "    \"output_price_per_1m_rub\": 176,\n"
-    "    \"prompt_tokens\": 64,\n"
-    "    \"prompt_tokens_details\": {\n"
-    "      \"audio_tokens\": 0,\n"
-    "      \"cache_write_tokens\": 0,\n"
-    "      \"cached_tokens\": 0\n"
-    "    },\n"
-    "    \"total_tokens\": 89\n"
-    "  }\n"
-    "}"
-  }};
-
   // Идентификатор ответа.
   string id = 1;
   // Тип объекта. Значение: chat.completion.
   string object = 2;
   // Время создания ответа в секундах Unix.
-  int64 created = 3 [(openapi.v3.property) = {type: "integer" format: "int64"}];
+  int64 created = 3;
   // Идентификатор модели, обработавшей запрос.
   string model = 4;
   // Варианты ответа модели.
@@ -238,55 +104,17 @@ message ChatCompletionResponse {
 }
 
 message EmbeddingRequest {
-  option (openapi.v3.schema) = {example: {yaml:
-    "{\n"
-    "  \"model\": \"text-embedding-3-small\",\n"
-    "  \"input\": \"Как восстановить пароль от панели управления Beget?\",\n"
-    "  \"encoding_format\": \"float\",\n"
-    "  \"dimensions\": 8\n"
-    "}"
-  }};
-
   // Идентификатор модели эмбеддингов из списка доступных моделей.
-  string model = 1 [(google.api.field_behavior) = REQUIRED, (openapi.v3.property) = {example: {yaml: "text-embedding-3-small"}}];
+  string model = 1 [(google.api.field_behavior) = REQUIRED];
   // Текст для создания эмбеддинга: строка или массив строк. Если модель поддерживает готовые токены, можно передать массив их идентификаторов или массив таких массивов.
-  google.protobuf.Value input = 2 [(google.api.field_behavior) = REQUIRED, (openapi.v3.property) = {example: {yaml: "'Как восстановить пароль от панели управления Beget?'"}}];
+  google.protobuf.Value input = 2 [(google.api.field_behavior) = REQUIRED];
   // Формат эмбеддинга: float - массив чисел, base64 - строка в кодировке Base64.
-  optional string encoding_format = 3 [(openapi.v3.property) = {enum: {yaml: "float"} enum: {yaml: "base64"}}];
+  optional string encoding_format = 3;
   // Количество чисел в эмбеддинге. Возможность изменить размерность зависит от модели.
   optional int32 dimensions = 4;
 }
 
 message EmbeddingResponse {
-  option (openapi.v3.schema) = {example: {yaml:
-    "{\n"
-    "  \"data\": [\n"
-    "    {\n"
-    "      \"embedding\": [\n"
-    "        0.2181396484375,\n"
-    "        0.340576171875,\n"
-    "        -0.2415771484375,\n"
-    "        0.0113983154296875,\n"
-    "        -0.24951171875,\n"
-    "        0.322021484375,\n"
-    "        -0.440185546875,\n"
-    "        0.646484375\n"
-    "      ],\n"
-    "      \"index\": 0,\n"
-    "      \"object\": \"embedding\"\n"
-    "    }\n"
-    "  ],\n"
-    "  \"model\": \"text-embedding-3-small\",\n"
-    "  \"object\": \"list\",\n"
-    "  \"usage\": {\n"
-    "    \"cost_rub\": 5.4e-05,\n"
-    "    \"input_price_per_1m_rub\": 3,\n"
-    "    \"prompt_tokens\": 18,\n"
-    "    \"total_tokens\": 18\n"
-    "  }\n"
-    "}"
-  }};
-
   // Тип объекта. Значение: list.
   string object = 1;
   // Эмбеддинги для переданных текстов.
@@ -307,26 +135,6 @@ message EmbeddingResponse {
 }
 
 message ListModelsResponse {
-  option (openapi.v3.schema) = {example: {yaml:
-    "{\n"
-    "  \"object\": \"list\",\n"
-    "  \"data\": [\n"
-    "    {\n"
-    "      \"id\": \"gemini-3.1-flash-lite\",\n"
-    "      \"object\": \"model\",\n"
-    "      \"created\": 1786700481,\n"
-    "      \"owned_by\": \"beget\"\n"
-    "    },\n"
-    "    {\n"
-    "      \"id\": \"text-embedding-3-small\",\n"
-    "      \"object\": \"model\",\n"
-    "      \"created\": 1786700481,\n"
-    "      \"owned_by\": \"beget\"\n"
-    "    }\n"
-    "  ]\n"
-    "}"
-  }};
-
   // Тип объекта. Значение: list.
   string object = 1;
   // Список моделей, доступных вашему API-ключу.
@@ -335,5 +143,5 @@ message ListModelsResponse {
 
 message GetModelRequest {
   // Идентификатор модели.
-  string model = 1 [(google.api.field_behavior) = REQUIRED, (openapi.v3.property) = {example: {yaml: "gemini-3.1-flash-lite"}}];
+  string model = 1 [(google.api.field_behavior) = REQUIRED];
 }
