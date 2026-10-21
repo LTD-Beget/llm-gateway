@@ -1,2 +1,3 @@
-# llm-gateway
-llm-gateway
+# ИИ шлюз
+
+Контракт OpenAI-совместимого API ИИ шлюза Beget.
