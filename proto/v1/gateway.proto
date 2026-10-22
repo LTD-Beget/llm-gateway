@@ -5,7 +5,6 @@ package beget.llm_gateway.v1.gateway;
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
-import "google/protobuf/struct.proto";
 import "openapiv3/annotations.proto";
 import "proto/v1/structures.proto";
 
@@ -123,21 +122,29 @@ service ModelService {
 }
 
 message ChatCompletionRequest {
-  option (openapi.v3.schema) = {example: {yaml:
-    "{\n"
-    "  \"model\": \"gemini-3.1-flash-lite\",\n"
-    "  \"messages\": [\n"
-    "    {\n"
-    "      \"role\": \"system\",\n"
-    "      \"content\": \"Ты редактор интернет-магазина. Напиши ровно одно короткое предложение, не более 20 слов. Без вступления, вариантов и форматирования.\"\n"
-    "    },\n"
-    "    {\n"
-    "      \"role\": \"user\",\n"
-    "      \"content\": \"Описание товара: белая керамическая кружка, 350 мл, можно мыть в посудомоечной машине.\"\n"
-    "    }\n"
-    "  ],\n"
-    "  \"max_tokens\": 128\n"
-    "}"
+  option (openapi.v3.schema) = {
+    properties: {
+      additional_properties: {name: "stop" value: {schema: {description: "Строка или массив строк, при появлении которых генерация ответа прекращается."}}}
+      additional_properties: {name: "response_format" value: {schema: {type: "object" description: "Требуемый формат ответа, например {\"type\":\"json_object\"} для JSON. Поддержка зависит от модели."}}}
+      additional_properties: {name: "tools" value: {schema: {type: "array" items: {schema_or_reference: {schema: {type: "object"}}} description: "Описания инструментов, которые может вызвать модель. Для функции укажите type: function и объект function с именем, описанием и схемой параметров."}}}
+      additional_properties: {name: "tool_choice" value: {schema: {description: "Режим вызова инструментов: none, auto, required или объект с именем конкретной функции. Поддержка зависит от модели."}}}
+      additional_properties: {name: "stream_options" value: {schema: {type: "object" description: "Параметры потокового ответа. Например, {\"include_usage\":true} добавляет статистику использования токенов. Используется вместе со stream: true."}}}
+    }
+    example: {yaml:
+      "{\n"
+      "  \"model\": \"gemini-3.1-flash-lite\",\n"
+      "  \"messages\": [\n"
+      "    {\n"
+      "      \"role\": \"system\",\n"
+      "      \"content\": \"Ты редактор интернет-магазина. Напиши ровно одно короткое предложение, не более 20 слов. Без вступления, вариантов и форматирования.\"\n"
+      "    },\n"
+      "    {\n"
+      "      \"role\": \"user\",\n"
+      "      \"content\": \"Описание товара: белая керамическая кружка, 350 мл, можно мыть в посудомоечной машине.\"\n"
+      "    }\n"
+      "  ],\n"
+      "  \"max_tokens\": 128\n"
+      "}"
   }};
 
   // Идентификатор модели. Доступные значения возвращает метод «Получить список моделей».
@@ -145,29 +152,19 @@ message ChatCompletionRequest {
   // Список сообщений диалога. Должен содержать хотя бы одно сообщение.
   repeated beget.llm_gateway.v1.structures.ChatMessage messages = 2 [(google.api.field_behavior) = REQUIRED];
   // Если true, передаёт ответ по частям в формате SSE. По умолчанию false.
-  optional bool stream = 3 [(openapi.v3.property) = {example: {yaml: "false"}}];
+  bool stream = 3 [(openapi.v3.property) = {example: {yaml: "false"}}];
   // Максимальное количество токенов в ответе модели. Поддержка зависит от модели.
-  optional int32 max_tokens = 4;
+  int32 max_tokens = 4;
   // Максимальное количество токенов ответа, включая токены рассуждений. Поддержка зависит от модели.
-  optional int32 max_completion_tokens = 5;
+  int32 max_completion_tokens = 5;
   // Степень случайности ответа: при меньшем значении модель выбирает более предсказуемые продолжения. Диапазон зависит от модели.
-  optional double temperature = 6;
+  double temperature = 6;
   // Доля суммарной вероятности, в пределах которой модель выбирает следующий токен. Например, 0.1 ограничивает выбор наиболее вероятными токенами с общей вероятностью 10%.
-  optional double top_p = 7;
+  double top_p = 7;
   // Количество вариантов ответа. Поддержка зависит от модели.
-  optional int32 n = 8;
-  // Строка или массив строк, при появлении которых генерация ответа прекращается.
-  google.protobuf.Value stop = 9;
-  // Требуемый формат ответа, например {"type":"json_object"} для JSON. Поддержка зависит от модели.
-  google.protobuf.Struct response_format = 10;
-  // Описания инструментов, которые может вызвать модель. Для функции укажите type: function и объект function с именем, описанием и схемой параметров.
-  repeated google.protobuf.Struct tools = 11;
-  // Режим вызова инструментов: none, auto, required или объект с именем конкретной функции. Поддержка зависит от модели.
-  google.protobuf.Value tool_choice = 12;
+  int32 n = 8;
   // Разрешает модели вызывать несколько инструментов параллельно. Поддержка зависит от модели.
-  optional bool parallel_tool_calls = 13;
-  // Параметры потокового ответа. Например, {"include_usage":true} добавляет статистику использования токенов. Используется вместе со stream: true.
-  google.protobuf.Struct stream_options = 14;
+  bool parallel_tool_calls = 13;
 }
 
 message ChatCompletionResponse {
@@ -223,33 +220,40 @@ message ChatCompletionResponse {
   beget.llm_gateway.v1.structures.TokenUsage usage = 6;
 
   message Choice {
+    option (openapi.v3.schema) = {
+      properties: {
+        additional_properties: {name: "message" value: {schema: {type: "object" description: "Сообщение модели. Содержит текст в content, вызовы инструментов в tool_calls и рассуждения в reasoning_content, если они присутствуют в ответе."}}}
+      }
+    };
+
     // Индекс варианта ответа, начиная с нуля.
     int32 index = 1;
-    // Сообщение модели. Содержит текст в content, вызовы инструментов в tool_calls и рассуждения в reasoning_content, если они присутствуют в ответе.
-    google.protobuf.Struct message = 2;
     // Причина завершения: stop - ответ завершён, length - достигнут лимит токенов, tool_calls - модель запросила вызов инструмента.
-    optional string finish_reason = 3;
+    string finish_reason = 3;
   }
 }
 
 message EmbeddingRequest {
-  option (openapi.v3.schema) = {example: {yaml:
-    "{\n"
-    "  \"model\": \"text-embedding-3-small\",\n"
-    "  \"input\": \"Как восстановить пароль от панели управления Beget?\",\n"
-    "  \"encoding_format\": \"float\",\n"
-    "  \"dimensions\": 8\n"
-    "}"
+  option (openapi.v3.schema) = {
+    properties: {
+      additional_properties: {name: "input" value: {schema: {description: "Текст для создания эмбеддинга: строка или массив строк. Если модель поддерживает готовые токены, можно передать массив их идентификаторов или массив таких массивов." example: {yaml: "'Как восстановить пароль от панели управления Beget?'"}}}}
+    }
+    required: "input"
+    example: {yaml:
+      "{\n"
+      "  \"model\": \"text-embedding-3-small\",\n"
+      "  \"input\": \"Как восстановить пароль от панели управления Beget?\",\n"
+      "  \"encoding_format\": \"float\",\n"
+      "  \"dimensions\": 8\n"
+      "}"
   }};
 
   // Идентификатор модели эмбеддингов из списка доступных моделей.
   string model = 1 [(google.api.field_behavior) = REQUIRED, (openapi.v3.property) = {example: {yaml: "text-embedding-3-small"}}];
-  // Текст для создания эмбеддинга: строка или массив строк. Если модель поддерживает готовые токены, можно передать массив их идентификаторов или массив таких массивов.
-  google.protobuf.Value input = 2 [(google.api.field_behavior) = REQUIRED, (openapi.v3.property) = {example: {yaml: "'Как восстановить пароль от панели управления Beget?'"}}];
   // Формат эмбеддинга: float - массив чисел, base64 - строка в кодировке Base64.
-  optional string encoding_format = 3;
+  string encoding_format = 3;
   // Количество чисел в эмбеддинге. Возможность изменить размерность зависит от модели.
-  optional int32 dimensions = 4;
+  int32 dimensions = 4;
 }
 
 message EmbeddingResponse {
@@ -292,12 +296,16 @@ message EmbeddingResponse {
   beget.llm_gateway.v1.structures.TokenUsage usage = 4;
 
   message Embedding {
+    option (openapi.v3.schema) = {
+      properties: {
+        additional_properties: {name: "embedding" value: {schema: {description: "Вектор в формате, заданном параметром encoding_format: массив чисел для float или строка Base64 для base64."}}}
+      }
+    };
+
     // Тип объекта. Значение: embedding.
     string object = 1;
     // Индекс текста в запросе, начиная с нуля.
     int32 index = 2;
-    // Вектор в формате, заданном параметром encoding_format: массив чисел для float или строка Base64 для base64.
-    google.protobuf.Value embedding = 3;
   }
 }
 
