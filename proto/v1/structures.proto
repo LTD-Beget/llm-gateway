@@ -4,14 +4,22 @@ package beget.llm_gateway.v1.structures;
 
 import "google/api/field_behavior.proto";
 import "google/protobuf/struct.proto";
+import "openapiv3/annotations.proto";
 
 option go_package = "github.com/LTD-Beget/llm-gateway/proto/v1;llmgateway";
 
 message ChatMessage {
+  option (openapi.v3.schema) = {example: {yaml:
+    "{\n"
+    "  \"role\": \"user\",\n"
+    "  \"content\": \"Описание товара: белая керамическая кружка, 350 мл, можно мыть в посудомоечной машине.\"\n"
+    "}"
+  }};
+
   // Роль отправителя: system, developer, user, assistant или tool. Доступные роли зависят от модели.
-  string role = 1 [(google.api.field_behavior) = REQUIRED];
+  string role = 1 [(google.api.field_behavior) = REQUIRED, (openapi.v3.property) = {example: {yaml: "user"}}];
   // Содержимое сообщения: текст или массив частей, например текста и изображений. Для сообщения assistant с вызовом инструмента может быть null.
-  google.protobuf.Value content = 2;
+  google.protobuf.Value content = 2 [(openapi.v3.property) = {example: {yaml: "'Описание товара: белая керамическая кружка, 350 мл, можно мыть в посудомоечной машине.'"}}];
   // Имя участника диалога. Позволяет различать сообщения нескольких участников с одинаковой ролью.
   optional string name = 3;
   // Вызовы инструментов, которые вернула модель в предыдущем сообщении assistant.
@@ -23,6 +31,28 @@ message ChatMessage {
 }
 
 message TokenUsage {
+  option (openapi.v3.schema) = {example: {yaml:
+    "{\n"
+    "  \"cache_write_price_per_1m_rub\": 10,\n"
+    "  \"cached_price_per_1m_rub\": 3,\n"
+    "  \"completion_tokens\": 25,\n"
+    "  \"completion_tokens_details\": {\n"
+    "    \"audio_tokens\": 0,\n"
+    "    \"reasoning_tokens\": 0\n"
+    "  },\n"
+    "  \"cost_rub\": 0.00632,\n"
+    "  \"input_price_per_1m_rub\": 30,\n"
+    "  \"output_price_per_1m_rub\": 176,\n"
+    "  \"prompt_tokens\": 64,\n"
+    "  \"prompt_tokens_details\": {\n"
+    "    \"audio_tokens\": 0,\n"
+    "    \"cache_write_tokens\": 0,\n"
+    "    \"cached_tokens\": 0\n"
+    "  },\n"
+    "  \"total_tokens\": 89\n"
+    "}"
+  }};
+
   // Число входных токенов.
   int32 prompt_tokens = 1;
   // Число выходных токенов в ответе модели.
@@ -46,12 +76,21 @@ message TokenUsage {
 }
 
 message Model {
+  option (openapi.v3.schema) = {example: {yaml:
+    "{\n"
+    "  \"id\": \"gemini-3.1-flash-lite\",\n"
+    "  \"object\": \"model\",\n"
+    "  \"created\": 1786700481,\n"
+    "  \"owned_by\": \"beget\"\n"
+    "}"
+  }};
+
   // Идентификатор модели для параметра model.
   string id = 1;
   // Тип объекта. Значение: model.
   string object = 2;
   // Время создания модели в секундах Unix.
-  int64 created = 3;
+  int64 created = 3 [(openapi.v3.property) = {type: "integer" format: "int64"}];
   // Владелец модели в каталоге шлюза. Значение: beget.
   string owned_by = 4;
 }
