@@ -9,13 +9,6 @@ import "openapiv3/annotations.proto";
 option go_package = "github.com/LTD-Beget/llm-gateway/proto/v1;llmgateway";
 
 message ChatMessage {
-  option (openapi.v3.schema) = {example: {yaml:
-    "{\n"
-    "  \"role\": \"user\",\n"
-    "  \"content\": \"Описание товара: белая керамическая кружка, 350 мл, можно мыть в посудомоечной машине.\"\n"
-    "}"
-  }};
-
   // Роль отправителя: system, developer, user, assistant или tool. Доступные роли зависят от модели.
   string role = 1 [(google.api.field_behavior) = REQUIRED, (openapi.v3.property) = {example: {yaml: "user"}}];
   // Содержимое сообщения: текст или массив частей, например текста и изображений. Для сообщения assistant с вызовом инструмента может быть null.
@@ -31,28 +24,6 @@ message ChatMessage {
 }
 
 message TokenUsage {
-  option (openapi.v3.schema) = {example: {yaml:
-    "{\n"
-    "  \"cache_write_price_per_1m_rub\": 10,\n"
-    "  \"cached_price_per_1m_rub\": 3,\n"
-    "  \"completion_tokens\": 25,\n"
-    "  \"completion_tokens_details\": {\n"
-    "    \"audio_tokens\": 0,\n"
-    "    \"reasoning_tokens\": 0\n"
-    "  },\n"
-    "  \"cost_rub\": 0.00632,\n"
-    "  \"input_price_per_1m_rub\": 30,\n"
-    "  \"output_price_per_1m_rub\": 176,\n"
-    "  \"prompt_tokens\": 64,\n"
-    "  \"prompt_tokens_details\": {\n"
-    "    \"audio_tokens\": 0,\n"
-    "    \"cache_write_tokens\": 0,\n"
-    "    \"cached_tokens\": 0\n"
-    "  },\n"
-    "  \"total_tokens\": 89\n"
-    "}"
-  }};
-
   // Число входных токенов.
   int32 prompt_tokens = 1;
   // Число выходных токенов в ответе модели.
