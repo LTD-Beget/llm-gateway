@@ -66,6 +66,8 @@ option (openapi.v3.document) = {
 service ChatService {
   // Сгенерировать ответ модели
   //
+  // Генерирует ответ модели по переданной истории сообщений.
+  //
   // Для потокового ответа укажите `stream: true`. Поток SSE завершается событием `data: [DONE]`.
   // Схема ниже описывает обычный JSON-ответ.
   rpc createChatCompletion(ChatCompletionRequest) returns (ChatCompletionResponse) {
@@ -82,7 +84,9 @@ service ChatService {
 service EmbeddingService {
   // Создать эмбеддинги текста
   //
-  // Для сравнения текстов используйте одну и ту же модель эмбеддингов.
+  // Возвращает эмбеддинги переданных текстов.
+  //
+  // Для сравнения текстов используйте одну и ту же модель.
   rpc createEmbedding(EmbeddingRequest) returns (EmbeddingResponse) {
     option (google.api.http) = {post: "/embeddings" body: "*"};
     option (openapi.v3.operation) = {
@@ -97,6 +101,8 @@ service EmbeddingService {
 service ModelService {
   // Получить список моделей
   //
+  // Возвращает доступные вашему API-ключу модели и их текущие цены.
+  //
   // Передавайте `id` выбранной модели в параметре `model`.
   rpc listModels(google.protobuf.Empty) returns (ListModelsResponse) {
     option (google.api.http) = {get: "/models"};
@@ -106,6 +112,10 @@ service ModelService {
   }
 
   // Получить информацию о модели
+  //
+  // Возвращает сведения о модели и её текущие цены.
+  //
+  // Идентификатор `model` возвращает метод «Получить список моделей».
   rpc getModel(GetModelRequest) returns (beget.llm_gateway.v1.structures.Model) {
     option (google.api.http) = {get: "/models/{model}"};
     option (openapi.v3.operation) = {
