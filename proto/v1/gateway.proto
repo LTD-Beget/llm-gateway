@@ -68,6 +68,10 @@ service ChatService {
   //
   // Генерирует ответ модели по переданной истории сообщений.
   //
+  // Указывайте `max_tokens` для расчёта предварительной стоимости по заданному лимиту ответа.
+  // Без лимита оценка может учитывать весь оставшийся контекст, и даже короткий запрос может получить ошибку `402`.
+  // Оплачиваются фактически использованные токены.
+  //
   // Для потокового ответа укажите `stream: true`. Поток SSE завершается событием `data: [DONE]`.
   // Схема ниже описывает обычный JSON-ответ.
   rpc createChatCompletion(ChatCompletionRequest) returns (ChatCompletionResponse) {
@@ -97,11 +101,11 @@ service EmbeddingService {
 
 // Модели
 //
-// Модели и цены, доступные вашему API-ключу.
+// Модели и цены, доступные переданному API-ключу.
 service ModelService {
   // Получить список моделей
   //
-  // Возвращает доступные вашему API-ключу модели и их текущие цены.
+  // Возвращает доступные переданному API-ключу модели и их текущие цены.
   //
   // Передавайте `id` выбранной модели в параметре `model`.
   rpc listModels(google.protobuf.Empty) returns (ListModelsResponse) {
@@ -156,7 +160,7 @@ message ChatCompletionRequest {
   repeated beget.llm_gateway.v1.structures.ChatMessage messages = 2 [(google.api.field_behavior) = REQUIRED];
   // Если true, передаёт ответ по частям в формате SSE. По умолчанию false.
   bool stream = 3 [(openapi.v3.property) = {example: {yaml: "false"}}];
-  // Максимальное количество токенов в ответе модели. Поддержка зависит от модели.
+  // Максимальное количество токенов в ответе модели. Используется для предварительной оценки стоимости. Поддержка зависит от модели.
   int32 max_tokens = 4;
   // Максимальное количество токенов ответа, включая токены рассуждений. Поддержка зависит от модели.
   int32 max_completion_tokens = 5;
@@ -349,7 +353,7 @@ message ListModelsResponse {
 
   // Тип объекта. Значение: list.
   string object = 1;
-  // Список моделей, доступных вашему API-ключу.
+  // Список моделей, доступных переданному API-ключу.
   repeated beget.llm_gateway.v1.structures.Model data = 2;
 }
 
