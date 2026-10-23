@@ -11,6 +11,8 @@ import "proto/v1/structures.proto";
 option go_package = "github.com/LTD-Beget/llm-gateway/proto/v1;llmgateway";
 
 option (openapi.v3.document) = {
+  servers: {url: "https://api-llm.beget.com/v1"}
+  security: {additional_properties: {name: "bearerAuth" value: {}}}
   info: {
     version: "v1"
     description: "Для работы с текстовыми моделями используйте Chat Completions API. Responses API не поддерживается."

@@ -7,4 +7,4 @@ index: |
   <p>Базовый адрес API: <code>https://api-llm.beget.com/v1</code>. Доступные параметры зависят от выбранной модели. Стоимость запросов списывается с баланса Beget в рублях.</p>
   <p><a href="https://beget.com/ru/kb/manual/ai-gateway" target="_blank" rel="noopener">Руководство по ИИ шлюзу</a></p>
 hide_sdk: true
-api_url: https://api-llm.beget.com/v1
+preserve_proto: true
