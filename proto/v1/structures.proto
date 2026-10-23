@@ -57,7 +57,14 @@ message Model {
     "  \"id\": \"gemini-3.1-flash-lite\",\n"
     "  \"object\": \"model\",\n"
     "  \"created\": 1786700481,\n"
-    "  \"owned_by\": \"beget\"\n"
+    "  \"owned_by\": \"beget\",\n"
+    "  \"pricing\": {\n"
+    "    \"prompt\": \"0.00003\",\n"
+    "    \"completion\": \"0.000176\",\n"
+    "    \"request\": \"0\",\n"
+    "    \"input_cache_read\": \"0.000003\",\n"
+    "    \"input_cache_write\": \"0.00001\"\n"
+    "  }\n"
     "}"
   }};
 
@@ -69,4 +76,20 @@ message Model {
   int64 created = 3 [(openapi.v3.property) = {type: "integer" format: "int64"}];
   // Владелец модели в каталоге шлюза. Значение: beget.
   string owned_by = 4;
+  // Цены модели в рублях. Значения передаются десятичными строками.
+  Pricing pricing = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Цены за один токен и за запрос.
+  message Pricing {
+    // Цена одного входного токена без кэша в рублях.
+    string prompt = 1 [(google.api.field_behavior) = REQUIRED];
+    // Цена одного выходного токена в рублях. Для эмбеддингов возвращает "0".
+    string completion = 2 [(google.api.field_behavior) = REQUIRED];
+    // Плата за запрос в рублях. Возвращает "0".
+    string request = 3 [(google.api.field_behavior) = REQUIRED];
+    // Цена чтения одного токена из кэша в рублях. Если отдельная цена не задана, возвращает "0", а тарификация идёт по цене prompt.
+    string input_cache_read = 4 [(google.api.field_behavior) = REQUIRED];
+    // Цена записи одного токена в кэш в рублях. Если отдельная цена не задана, возвращает "0", а тарификация идёт по цене prompt.
+    string input_cache_write = 5 [(google.api.field_behavior) = REQUIRED];
+  }
 }

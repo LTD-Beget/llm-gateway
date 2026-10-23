@@ -62,16 +62,12 @@ option (openapi.v3.document) = {
 
 // Генерация ответов
 //
-// Генерация ответов модели на основе переданных сообщений.
+// Ответы модели по истории сообщений.
 service ChatService {
-  // Генерирует ответ модели на основе переданных сообщений.
+  // Сгенерировать ответ модели
   //
-  // Передавайте историю диалога в поле `messages`. Возможности модели определяют,
-  // какие типы сообщений, параметры генерации и инструменты можно использовать.
-  //
-  // По умолчанию возвращает ответ целиком в JSON. При `stream: true` передаёт ответ
-  // по частям в формате `text/event-stream` (SSE). Поток завершается событием `data: [DONE]`.
-  // Схема ответа описывает режим без потоковой передачи.
+  // Для потокового ответа укажите `stream: true`. Поток SSE завершается событием `data: [DONE]`.
+  // Схема ниже описывает обычный JSON-ответ.
   rpc createChatCompletion(ChatCompletionRequest) returns (ChatCompletionResponse) {
     option (google.api.http) = {post: "/chat/completions" body: "*"};
     option (openapi.v3.operation) = {
@@ -82,30 +78,26 @@ service ChatService {
 
 // Эмбеддинги
 //
-// Векторные представления текста для поиска по смыслу и сравнения текстов.
+// Векторные представления текста.
 service EmbeddingService {
-  // Создаёт эмбеддинги для переданного текста.
+  // Создать эмбеддинги текста
   //
-  // Эмбеддинг представляет текст в виде массива чисел. Его можно использовать для поиска
-  // по смыслу и сравнения текстов. Для запроса и документов выбирайте одну и ту же модель.
-  // В примере `dimensions: 8` задаёт вектор из восьми чисел.
+  // Для сравнения текстов используйте одну и ту же модель эмбеддингов.
   rpc createEmbedding(EmbeddingRequest) returns (EmbeddingResponse) {
     option (google.api.http) = {post: "/embeddings" body: "*"};
     option (openapi.v3.operation) = {
       responses: {default: {reference: {_ref: "#/components/responses/GatewayError"}}}
     };
   }
-
 }
 
 // Модели
 //
-// Информация о моделях, доступных вашему API-ключу.
+// Модели и цены, доступные вашему API-ключу.
 service ModelService {
-  // Возвращает список моделей, доступных вашему API-ключу.
+  // Получить список моделей
   //
-  // Используйте идентификатор из поля `id` в параметре `model` при генерации ответа
-  // или создании эмбеддингов. Список зависит от ограничений API-ключа.
+  // Передавайте `id` выбранной модели в параметре `model`.
   rpc listModels(google.protobuf.Empty) returns (ListModelsResponse) {
     option (google.api.http) = {get: "/models"};
     option (openapi.v3.operation) = {
@@ -113,8 +105,7 @@ service ModelService {
     };
   }
 
-  // Возвращает информацию о модели по её идентификатору.
-  // Модель должна быть доступна вашему API-ключу.
+  // Получить информацию о модели
   rpc getModel(GetModelRequest) returns (beget.llm_gateway.v1.structures.Model) {
     option (google.api.http) = {get: "/models/{model}"};
     option (openapi.v3.operation) = {
@@ -320,13 +311,27 @@ message ListModelsResponse {
     "      \"id\": \"gemini-3.1-flash-lite\",\n"
     "      \"object\": \"model\",\n"
     "      \"created\": 1786700481,\n"
-    "      \"owned_by\": \"beget\"\n"
+    "      \"owned_by\": \"beget\",\n"
+    "      \"pricing\": {\n"
+    "        \"prompt\": \"0.00003\",\n"
+    "        \"completion\": \"0.000176\",\n"
+    "        \"request\": \"0\",\n"
+    "        \"input_cache_read\": \"0.000003\",\n"
+    "        \"input_cache_write\": \"0.00001\"\n"
+    "      }\n"
     "    },\n"
     "    {\n"
     "      \"id\": \"text-embedding-3-small\",\n"
     "      \"object\": \"model\",\n"
     "      \"created\": 1786700481,\n"
-    "      \"owned_by\": \"beget\"\n"
+    "      \"owned_by\": \"beget\",\n"
+    "      \"pricing\": {\n"
+    "        \"prompt\": \"0.000003\",\n"
+    "        \"completion\": \"0\",\n"
+    "        \"request\": \"0\",\n"
+    "        \"input_cache_read\": \"0\",\n"
+    "        \"input_cache_write\": \"0\"\n"
+    "      }\n"
     "    }\n"
     "  ]\n"
     "}"
