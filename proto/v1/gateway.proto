@@ -15,7 +15,7 @@ option (openapi.v3.document) = {
   security: {additional_properties: {name: "bearerAuth" value: {}}}
   info: {
     version: "v1"
-    description: "Для работы с текстовыми моделями используйте Chat Completions API. Responses API не поддерживается."
+    description: "Для работы с текстовыми моделями используйте Chat Completions API или Responses API."
   }
   external_docs: {url: "https://beget.com/ru/kb/manual/ai-gateway" description: "Руководство по ИИ шлюзу"}
   components: {
@@ -76,6 +76,83 @@ service ChatService {
   // Схема ниже описывает обычный JSON-ответ.
   rpc createChatCompletion(ChatCompletionRequest) returns (ChatCompletionResponse) {
     option (google.api.http) = {post: "/chat/completions" body: "*"};
+    option (openapi.v3.operation) = {
+      responses: {default: {reference: {_ref: "#/components/responses/GatewayError"}}}
+    };
+  }
+}
+
+// Responses API
+//
+// Ответы модели по входным элементам: сообщениям, вызовам функций и рассуждениям.
+service ResponseService {
+  // Создать ответ модели
+  //
+  // Создаёт ответ модели по переданным входным элементам в формате OpenAI Responses API.
+  //
+  // Для потокового ответа укажите `stream: true`. Каждое событие SSE передаётся строками `event: <type>` и `data: <json>`.
+  // Поток заканчивается событием `response.completed`, `response.incomplete`, `response.failed` или `error`, строки `data: [DONE]` нет.
+  // Обрыв соединения или превышение лимита времени завершает поток событием `error` с кодом шлюза и `param: null`. Пример:
+  //
+  // ```text
+  // event: error
+  // data: {"type":"error","sequence_number":12,"code":"upstream_timeout","message":"upstream timeout","param":null}
+  // ```
+  //
+  // Схема ниже описывает обычный JSON-ответ. Пример успешного потока:
+  //
+  // ```text
+  // event: response.created
+  // data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_3f9c2a7e","object":"response","status":"in_progress","model":"gpt-5.4-mini","output":[],"usage":null}}
+  //
+  // event: response.in_progress
+  // data: {"type":"response.in_progress","sequence_number":1,"response":{"id":"resp_3f9c2a7e","status":"in_progress"}}
+  //
+  // event: response.output_item.added
+  // data: {"type":"response.output_item.added","sequence_number":2,"output_index":0,"item":{"id":"msg_1793257265898_0ikiem","type":"message","status":"in_progress","role":"assistant","phase":null,"content":[]}}
+  //
+  // event: response.content_part.added
+  // data: {"type":"response.content_part.added","sequence_number":3,"item_id":"msg_1793257265898_0ikiem","output_index":0,"content_index":0,"part":{"type":"output_text","text":"","annotations":[],"logprobs":[]}}
+  //
+  // event: response.output_text.delta
+  // data: {"type":"response.output_text.delta","sequence_number":4,"item_id":"msg_1793257265898_0ikiem","output_index":0,"content_index":0,"delta":"39","logprobs":[]}
+  //
+  // ... (события между ними пропущены)
+  //
+  // event: response.completed
+  // data: {"type":"response.completed","sequence_number":11,"response":{"id":"resp_3f9c2a7e","status":"completed","usage":{"input_tokens":26,"output_tokens":24,"total_tokens":50,"cost_rub":0.0051}}}
+  // ```
+  //
+  // Указывайте `max_output_tokens` для расчёта предварительной стоимости по заданному лимиту ответа.
+  // Оплачиваются фактически использованные токены.
+  //
+  // Ответы и диалоги шлюз не хранит. Историю диалога передавайте в `input`. Чтобы продолжить рассуждение модели,
+  // укажите `include: ["reasoning.encrypted_content"]` и верните элемент `reasoning` из `output` в `input` следующего запроса.
+  //
+  // Отличия от OpenAI:
+  // 1. `previous_response_id`, `conversation`, `background` и элементы `item_reference` игнорируются. Ответ всегда синхронный.
+  // 2. `store` принимается, в ответе всегда `false`.
+  // 3. Игнорируются `prompt`, `context_management`, элементы `compaction`, `prompt_cache_retention`, `prompt_cache_options`, `service_tier`, `user`, `moderation` и `access_programs`.
+  // 4. `max_tool_calls` принимает значения от 1 до 30 и ни на что не влияет.
+  // 5. Встроенные инструменты не поддерживаются, шлюз отвечает ошибкой `unsupported_parameter`. Поддерживаются инструменты типов `function`, `custom` и `namespace` с вложенными `function` и `custom`.
+  // 6. Вероятности токенов не поддерживаются. `top_logprobs` и `message.output_text.logprobs` в `include` приводят к ошибке `unsupported_parameter`.
+  // 7. Элементы `reasoning` без `encrypted_content` шлюз убирает из `input`.
+  // 8. `phase` у сообщений ассистента всегда `null`.
+  // 9. Параметры в ответе показывают фактически применённые значения.
+  // 10. `usage` дополнительно содержит цены модели и `cost_rub`.
+  // 11. Методы `input_tokens`, `compact`, методы по `id` ответа и Conversations API возвращают `404`.
+  // 12. `tool_choice` вида `allowed_tools` не поддерживается.
+  // 13. Общий лимит времени 120 с, пауза между событиями потока 20 с, ответ без потока 90 с. Рассуждение без событий дольше 20 с обрывает поток.
+  // 14. Часть `input_file` в сообщениях не поддерживается ни одной моделью, шлюз отвечает ошибкой `unsupported_parameter` с путём к части, например `input[0].content[1]`.
+  // 15. Инструменты типа `custom` шлюз передаёт моделям как функции. Грамматика инструмента уходит модели текстом и не проверяется, клиент всё равно получает `custom_tool_call`. Элемент `custom_tool_call` в истории принимается только со строковым `input`, иначе `invalid_parameter`. Эмулированный вызов, оборванный `max_output_tokens`, приходит со статусом `incomplete` и частичным `input`.
+  //
+  // Пример ошибки для встроенного инструмента:
+  //
+  // ```json
+  // {"error": {"message": "tools[0].type is not supported", "type": "invalid_request_error", "param": "tools[0].type", "code": "unsupported_parameter"}}
+  // ```
+  rpc createResponse(CreateResponseRequest) returns (Response) {
+    option (google.api.http) = {post: "/responses" body: "*"};
     option (openapi.v3.operation) = {
       responses: {default: {reference: {_ref: "#/components/responses/GatewayError"}}}
     };
@@ -238,6 +315,152 @@ message ChatCompletionResponse {
     // Причина завершения: stop - ответ завершён, length - достигнут лимит токенов, tool_calls - модель запросила вызов инструмента.
     string finish_reason = 3;
   }
+}
+
+message CreateResponseRequest {
+  option (openapi.v3.schema) = {
+    properties: {
+      additional_properties: {name: "input" value: {schema: {description: "Входные данные: строка или массив элементов. Элементы: сообщения с ролями `user`, `assistant`, `system`, `developer`, а также `function_call`, `function_call_output`, `custom_tool_call`, `custom_tool_call_output` и `reasoning` с `encrypted_content`. Пустая строка и пустой массив недопустимы. Часть `input_file` не поддерживается." example: {yaml: "'Сколько будет 17*23? Ответь только числом.'"}}}}
+      additional_properties: {name: "tools" value: {schema: {type: "array" items: {schema_or_reference: {schema: {type: "object"}}} description: "Описания инструментов типов `function`, `custom` и `namespace`. Встроенные инструменты не поддерживаются."}}}
+      additional_properties: {name: "tool_choice" value: {schema: {description: "Режим вызова инструментов: `none`, `auto`, `required` или объект с именем конкретной функции или custom-инструмента. Вид `allowed_tools` не поддерживается. Поддержка зависит от модели."}}}
+      additional_properties: {name: "reasoning" value: {schema: {type: "object" description: "Параметры рассуждения: `effort` и `summary`. Поддержка зависит от модели."}}}
+      additional_properties: {name: "text" value: {schema: {type: "object" description: "Формат и подробность текста ответа: `format` и `verbosity`. Поддержка зависит от модели."}}}
+      additional_properties: {name: "include" value: {schema: {type: "array" items: {schema_or_reference: {schema: {type: "string"}}} description: "Дополнительные данные в ответе. Поддерживается `reasoning.encrypted_content`. Значение `message.output_text.logprobs` не поддерживается, остальные значения игнорируются."}}}
+      additional_properties: {name: "metadata" value: {schema: {type: "object" description: "Произвольные пары ключ-значение, которые передаются поставщику."}}}
+    }
+    required: "input"
+    example: {yaml:
+      "{\n"
+      "  \"model\": \"gpt-5.4-mini\",\n"
+      "  \"input\": [{\"role\": \"user\", \"content\": \"Сколько будет 17*23? Посчитай в уме и ответь только числом.\"}],\n"
+      "  \"reasoning\": {\"effort\": \"medium\"},\n"
+      "  \"store\": false,\n"
+      "  \"include\": [\"reasoning.encrypted_content\"],\n"
+      "  \"max_output_tokens\": 3000\n"
+      "}"
+  }};
+
+  // Идентификатор модели. Доступные значения возвращает метод «Получить список моделей».
+  string model = 1 [(google.api.field_behavior) = REQUIRED, (openapi.v3.property) = {example: {yaml: "gpt-5.4-mini"}}];
+  // Если true, передаёт ответ по частям в формате SSE. По умолчанию false.
+  bool stream = 3 [(openapi.v3.property) = {example: {yaml: "false"}}];
+  // Системные инструкции для модели.
+  string instructions = 4;
+  // Максимальное количество токенов ответа, включая токены рассуждений. Минимум 16. Используется для предварительной оценки стоимости.
+  int32 max_output_tokens = 5;
+  // Максимальное число вызовов инструментов от 1 до 30. Принимается для совместимости и ни на что не влияет.
+  int32 max_tool_calls = 6;
+  // Степень случайности ответа от 0 до 2. Поддержка зависит от модели.
+  double temperature = 7;
+  // Доля суммарной вероятности, в пределах которой модель выбирает следующий токен. Поддержка зависит от модели.
+  double top_p = 8;
+  // Не поддерживается, ненулевое значение приводит к ошибке `unsupported_parameter`.
+  int32 top_logprobs = 9;
+  // Разрешает модели вызывать несколько инструментов параллельно. Поддержка зависит от модели.
+  bool parallel_tool_calls = 10;
+  // Стратегия при переполнении контекста: auto или disabled.
+  string truncation = 11;
+  // Ключ для улучшения попаданий в кэш запросов с общим началом.
+  string prompt_cache_key = 12;
+  // Стабильный идентификатор конечного пользователя для выявления нарушений.
+  string safety_identifier = 13;
+  // Принимается любое значение. Ответ и диалог не хранятся, в ответе всегда false.
+  bool store = 14;
+}
+
+message Response {
+  option (openapi.v3.schema) = {
+    properties: {
+      additional_properties: {name: "output" value: {schema: {type: "array" items: {schema_or_reference: {schema: {type: "object"}}} description: "Элементы вывода: сообщения `message`, вызовы `function_call` и `custom_tool_call`, рассуждения `reasoning`. В `reasoning` поле `encrypted_content` появляется при `include: [\"reasoning.encrypted_content\"]`."}}}
+      additional_properties: {name: "usage" value: {schema: {type: "object" description: "Статистика использования токенов и стоимость запроса в рублях: `input_tokens`, `output_tokens`, `total_tokens`, их детализация, цены модели за миллион токенов и `cost_rub`."}}}
+      additional_properties: {name: "error" value: {schema: {type: "object" nullable: true description: "Описание ошибки для ответа со статусом `failed`, иначе null."}}}
+      additional_properties: {name: "incomplete_details" value: {schema: {type: "object" nullable: true description: "Причина неполного ответа для статуса `incomplete`, иначе null."}}}
+    }
+    example: {yaml:
+      "{\n"
+      "  \"id\": \"resp_3f9c2a7e5b1d4c8a9e6f0b2d7a4c1e58\",\n"
+      "  \"object\": \"response\",\n"
+      "  \"created_at\": 1793256905,\n"
+      "  \"completed_at\": 1793256905,\n"
+      "  \"status\": \"completed\",\n"
+      "  \"error\": null,\n"
+      "  \"incomplete_details\": null,\n"
+      "  \"model\": \"gpt-5.4-mini\",\n"
+      "  \"output\": [\n"
+      "    {\n"
+      "      \"id\": \"rs_0da9873fe0d86f6f016ae2edc9117c87d19bcbb8c6e1e30a61\",\n"
+      "      \"type\": \"reasoning\",\n"
+      "      \"summary\": [],\n"
+      "      \"encrypted_content\": \"gAAAAABq4u3J…\",\n"
+      "      \"status\": \"completed\"\n"
+      "    },\n"
+      "    {\n"
+      "      \"id\": \"msg_1793256905558_0\",\n"
+      "      \"type\": \"message\",\n"
+      "      \"status\": \"completed\",\n"
+      "      \"role\": \"assistant\",\n"
+      "      \"phase\": null,\n"
+      "      \"content\": [{\"type\": \"output_text\", \"text\": \"391\", \"annotations\": [], \"logprobs\": []}]\n"
+      "    }\n"
+      "  ],\n"
+      "  \"background\": false,\n"
+      "  \"conversation\": null,\n"
+      "  \"instructions\": null,\n"
+      "  \"max_output_tokens\": 3000,\n"
+      "  \"max_tool_calls\": null,\n"
+      "  \"metadata\": {},\n"
+      "  \"parallel_tool_calls\": true,\n"
+      "  \"previous_response_id\": null,\n"
+      "  \"prompt\": null,\n"
+      "  \"prompt_cache_key\": null,\n"
+      "  \"prompt_cache_retention\": null,\n"
+      "  \"reasoning\": {\"effort\": \"medium\", \"summary\": null},\n"
+      "  \"safety_identifier\": null,\n"
+      "  \"service_tier\": \"default\",\n"
+      "  \"store\": false,\n"
+      "  \"temperature\": 1,\n"
+      "  \"text\": {\"format\": {\"type\": \"text\"}, \"verbosity\": \"medium\"},\n"
+      "  \"tool_choice\": \"auto\",\n"
+      "  \"tools\": [],\n"
+      "  \"top_logprobs\": 0,\n"
+      "  \"top_p\": 1,\n"
+      "  \"truncation\": \"disabled\",\n"
+      "  \"user\": null,\n"
+      "  \"usage\": {\n"
+      "    \"input_tokens\": 26,\n"
+      "    \"input_tokens_details\": {\"cached_tokens\": 0},\n"
+      "    \"output_tokens\": 24,\n"
+      "    \"output_tokens_details\": {\"reasoning_tokens\": 17},\n"
+      "    \"total_tokens\": 50,\n"
+      "    \"input_price_per_1m_rub\": 30,\n"
+      "    \"cached_price_per_1m_rub\": 3,\n"
+      "    \"cache_write_price_per_1m_rub\": 30,\n"
+      "    \"output_price_per_1m_rub\": 180,\n"
+      "    \"cost_rub\": 0.0051\n"
+      "  }\n"
+      "}"
+  }};
+
+  // Идентификатор ответа.
+  string id = 1;
+  // Тип объекта. Значение: response.
+  string object = 2;
+  // Время создания ответа в секундах Unix.
+  int64 created_at = 3 [(openapi.v3.property) = {type: "integer" format: "int64"}];
+  // Время завершения ответа в секундах Unix. Для незавершённого ответа null.
+  int64 completed_at = 4 [(openapi.v3.property) = {type: "integer" format: "int64" nullable: true}];
+  // Статус ответа: completed, incomplete, failed или in_progress.
+  string status = 5;
+  // Идентификатор модели, обработавшей запрос.
+  string model = 7;
+  // Системные инструкции, применённые к запросу.
+  string instructions = 8 [(openapi.v3.property) = {nullable: true}];
+  // Применённый лимит токенов ответа.
+  int32 max_output_tokens = 9 [(openapi.v3.property) = {nullable: true}];
+  // Всегда false: ответ формируется синхронно.
+  bool background = 10;
+  // Всегда false: ответы не хранятся.
+  bool store = 11;
 }
 
 message EmbeddingRequest {
